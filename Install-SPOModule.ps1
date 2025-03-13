@@ -18,34 +18,38 @@ Runs the script to uninstall and reinstall the "Microsoft.Online.SharePoint.Powe
 This script requires administrative privileges to uninstall and install modules.
 #>
 
-# Uninstall SPO if installed from Windows then install with PowerShell
-$spomod = Get-Module -Name Microsoft.Online.SharePoint.PowerShell -ListAvailable | Select Name, Version
-
-if ($spomod) {
-    # Uninstall Operation
-    Get-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -ListAvailable | Select Name, Version | Uninstall-Module -Force -AllVersions
-
-    # Install SPO PowerShell
-    Install-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -Force -SkipPublisherCheck
-    Write-Host "Close and reopen PowerShell, so the changes take effect" -ForegroundColor Green
-    break
-}
 
 # Uninstall SPO if installed from Windows then install with PowerShell
-$spoapp = Get-WmiObject -Class Win32_Product | where-Object { $_.name -Match "SharePoint Online Management Shell" }
+$spomod = Get-Module -Name Microsoft.Online.SharePoint.PowerShell -ListAvailable | Select-Object Name, Version
+$spoapp = Get-WmiObject -Class Win32_Product | where-Object { $_.name -like "SharePoint Online Management Shell" }
 
-if ($spoapp) {
-    # Uninstall Operation
-    $spoapp.Uninstall()
+try {
+    if ($spomod -or $spoapp) {
+        if ($spomod) {
+            # Uninstall Operation
+            Get-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -ListAvailable | Select-Object Name, Version | Uninstall-Module -Force -AllVersions
+        }
 
-    # Install SPO PowerShell
-    Install-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -Force -SkipPublisherCheck
-    Write-Host "Close and reopen PowerShell, so the changes take effect" -ForegroundColor Green
-    break
+        if ($spoapp) {
+            # Uninstall Operation
+            $spoapp.Uninstall()
+        }
+
+        # Install SPO PowerShell
+        Install-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -Force -SkipPublisherCheck
+        Write-Host "Close and reopen PowerShell, so the changes take effect" -ForegroundColor Green
+      
+    }
+    else {
+        # If the SPO Module is not installed by MSI or PowerShell, install it with PowerShell
+        Install-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -Force -SkipPublisherCheck
+        Write-Host "Close and reopen PowerShell, so the changes take effect" -ForegroundColor Green
+    }
+}
+catch {
+    Write-Host "An error occurred: $_" -ForegroundColor Red
+    Write-Host "Please ensure that the module is not in use and try again." -ForegroundColor Yellow
 }
 
-# If the SPO Module is not installed by MSI or PowerShell, install it with PowerShell
-if ($null -eq $spoapp -or $spomod) {
-    Install-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -Force -SkipPublisherCheck
-    Write-Host "Close and reopen PowerShell, so the changes take effect" -ForegroundColor Green
-}
+Write-Host "The New SPO Module version is:" -ForegroundColor Green
+Get-Module -Name 'Microsoft.Online.SharePoint.PowerShell' -ListAvailable | Select-Object Name, Version
